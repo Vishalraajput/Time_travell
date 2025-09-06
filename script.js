@@ -1,59 +1,112 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Select the HTML elements once the page is loaded
     const form = document.getElementById('time-travel-form');
     const yearInput = document.getElementById('yearInput');
     const messagesDiv = document.getElementById('messages');
-
-    // The sequence of messages to display
+    
+    // --- UPDATED: Added a new final message for fetching data ---
     const messages = [
-        "Gathering Information...",
-        "Searching For Portals...",
-        "Contacting Loki...",
-        "Portal Found...",
-        "Opening portal...",
+        "Charging the flux capacitor... with a potato.",
+        "Calculating temporal paradox probabilities...",
+        "Rerouting past a T-Rex traffic jam...",
+        "Ignoring all safety warnings...",
+        "Hold onto your socks!",
+        "Fetching timeline data...", // New message before API call
     ];
 
-    let currentInterval = null; // To prevent multiple animations at once
+    let currentInterval = null;
 
-    // This function runs when the form is submitted
-    form.addEventListener('submit', (event) => {
-        event.preventDefault(); // Stop the page from reloading
-
-        // Don't start a new animation if one is already running
-        if (currentInterval) {
-            return;
-        }
+    // --- UPDATED: The main function is now async to handle API calls ---
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault(); 
+        if (currentInterval) return;
 
         const year = yearInput.value.trim();
 
-        // Check if the input is empty
         if (year === '') {
-            messagesDiv.textContent = 'Please enter a year to begin your journey.';
-            messagesDiv.style.color = 'var(--shadow-color-inactive)';
+            messagesDiv.textContent = 'Please enter a year! The timeline depends on it!';
+            messagesDiv.style.color = 'var(--error-color)';
             return;
         }
         
-        // Reset styles and clear previous messages
         messagesDiv.style.color = 'var(--primary-text)';
         messagesDiv.textContent = ""; 
         
         let messageIndex = 0;
 
-        // Use setInterval to show each message every 2 seconds (2000ms)
-        currentInterval = setInterval(() => {
-            if (messageIndex < messages.length) {
-                // Display the next message in the sequence
-                messagesDiv.textContent = messages[messageIndex];
-                messageIndex++;
-            } else {
-                // End the animation once all messages are shown
-                clearInterval(currentInterval);
-                currentInterval = null; // Reset the interval tracker
+        // Using a promise to know when the message animation is done
+        await new Promise(resolve => {
+            const showNextMessage = () => {
+                messagesDiv.classList.add('fade-out');
                 
-                // Display the final message
-                messagesDiv.textContent = `Arrived in  ${year}! But... wait... 26 me to duniya Khatam hai! 😂😂`;
-                yearInput.value = ""; // Clear the input field for the next trip
-            }
-        }, 2000);
+                setTimeout(() => {
+                    if (messageIndex < messages.length) {
+                        messagesDiv.textContent = messages[messageIndex];
+                        messagesDiv.classList.remove('fade-out');
+                        messageIndex++;
+                    } else {
+                        clearInterval(currentInterval);
+                        currentInterval = null; 
+                        resolve(); // Resolve the promise when messages are done
+                    }
+                }, 500);
+            };
+
+            showNextMessage();
+            currentInterval = setInterval(showNextMessage, 2000);
+        });
+
+        // --- NEW: Fetch data from APIs after messages are shown ---
+        try {
+            // Promise.all lets us call both APIs at the same time for speed
+            const [factResponse, jokeResponse] = await Promise.all([
+                fetch(`http://numbersapi.com/${year}/year`),
+                fetch('https://icanhazdadjoke.com/', {
+                    headers: { 'Accept': 'application/json' }
+                })
+            ]);
+
+            const yearFact = await factResponse.text();
+            const jokeData = await jokeResponse.json();
+
+            // Construct the final, dynamic message
+            const finalMessage = `
+                <p style="font-size: 1.1rem; margin-bottom: 10px;">${yearFact}</p>
+                <p style="font-size: 0.9rem; font-style: italic;">...and a dad joke from this era: "${jokeData.joke}"</p>
+            `;
+            
+            messagesDiv.style.color = 'var(--success-color)';
+            messagesDiv.innerHTML = finalMessage; // Use innerHTML to render the paragraphs
+            messagesDiv.classList.remove('fade-out');
+            
+            launchConfetti();
+
+        } catch (error) {
+            // This runs if the APIs fail for any reason
+            console.error("Time travel circuits fried! Error:", error);
+            messagesDiv.style.color = 'var(--error-color)';
+            messagesDiv.textContent = `Whoops! We hit a time paradox and couldn't get data for ${year}.`;
+            messagesDiv.classList.remove('fade-out');
+        } finally {
+             yearInput.value = ""; // Clear input regardless of success or failure
+        }
     });
+
+    // Confetti function remains the same
+    function launchConfetti() {
+        const confettiContainer = document.getElementById('confetti-container');
+        const colors = ['#ff69b4', '#55efc4', '#ffeaa7', '#a29bfe', '#ffffff'];
+        const confettiCount = 100;
+
+        for (let i = 0; i < confettiCount; i++) {
+            const confetti = document.createElement('div');
+            confetti.classList.add('confetti');
+            confetti.style.left = `${Math.random() * 100}vw`;
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.width = `${Math.random() * 10 + 5}px`;
+            confetti.style.height = confetti.style.width;
+            confetti.style.animationDelay = `${Math.random() * 2}s`;
+            confettiContainer.appendChild(confetti);
+            setTimeout(() => { confetti.remove(); }, 5000);
+        }
+    }
 });
